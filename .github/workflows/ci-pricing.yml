@@ -54,6 +54,7 @@ jobs:
           name: python-test-reports
           path: apps/pricing-service/build/test-results/
           if-no-files-found: warn
+          retention-days: 7
 
   quality:
     name: Python quality
@@ -93,6 +94,7 @@ jobs:
           name: python-quality-reports
           path: apps/pricing-service/build/reports/ruff/
           if-no-files-found: warn
+          retention-days: 7
 
   image:
     name: Python Docker image

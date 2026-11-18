@@ -53,6 +53,7 @@ jobs:
             apps/car-rental-service/build/test-results/
             apps/car-rental-service/build/reports/tests/
           if-no-files-found: warn
+          retention-days: 7
 
   quality:
     name: Java quality
@@ -78,6 +79,7 @@ jobs:
           name: java-quality-reports
           path: apps/car-rental-service/build/reports/checkstyle/
           if-no-files-found: warn
+          retention-days: 7
 
   image:
     name: Java Docker image
