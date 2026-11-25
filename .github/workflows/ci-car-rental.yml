@@ -2,7 +2,7 @@ name: CI - car-rental-service
 
 on:
   push:
-    branches: [main]
+    branches: [main, base/01-ci]
     paths:
       - 'apps/car-rental-service/**'
       - '.github/workflows/ci-car-rental.yml'
@@ -113,7 +113,7 @@ jobs:
         run: echo "ref=${REGISTRY}/${IMAGE_NAME,,}" >> "$GITHUB_OUTPUT"
 
       - name: Log in to GHCR
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/base/01-ci')
         uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
         with:
           registry: ${{ env.REGISTRY }}
@@ -135,7 +135,7 @@ jobs:
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: apps/car-rental-service
-          push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+          push: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/base/01-ci') }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha,scope=car-rental-service
@@ -147,7 +147,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     needs: docker
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/base/01-ci')
     permissions:
       contents: read
       packages: write # pousser signature et attestations dans ghcr
