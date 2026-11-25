@@ -194,7 +194,22 @@ jobs:
           sbom-path: python-sbom.spdx.json
           push-to-registry: true
 
-      - name: Scan digest with Trivy
+      - name: Verify signature
+        run: |
+          cosign verify \
+            --certificate-identity "https://github.com/${{ github.workflow_ref }}" \
+            --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+            "$IMAGE@$DIGEST"
+
+      - name: Verify attestations
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh attestation verify "oci://$IMAGE@$DIGEST" --repo "${{ github.repository }}"
+          gh attestation verify "oci://$IMAGE@$DIGEST" --repo "${{ github.repository }}" \
+            --predicate-type https://spdx.dev/Document/v2.3
+
+      - name: Scan verified digest with Trivy
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         env:
           TRIVY_USERNAME: ${{ github.actor }}
