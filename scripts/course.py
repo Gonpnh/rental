@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 from pathlib import Path
 import shutil
 import subprocess
@@ -64,6 +65,57 @@ def lint() -> None:
 def verify() -> None:
     test()
     lint()
+
+
+USES_RE = re.compile(r"^\s*-?\s*uses:\s*['\"]?([^\s'\"#]+)")
+FROM_RE = re.compile(r"^\s*FROM\s+(?:--platform=\S+\s+)?(\S+)(?:\s+AS\s+(\S+))?", re.IGNORECASE)
+FULL_SHA_RE = re.compile(r"@[0-9a-f]{40}$")
+DIGEST_RE = re.compile(r"@sha256:[0-9a-f]{64}$")
+
+
+def check_workflows() -> list[str]:
+    errors = []
+    for path in sorted((ROOT / ".github" / "workflows").glob("*.y*ml")):
+        for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+            match = USES_RE.match(line)
+            if not match:
+                continue
+            ref = match.group(1)
+            if ref.startswith("./"):
+                continue  # action locale du depot
+            if ref.startswith("docker://"):
+                ok = DIGEST_RE.search(ref)
+            else:
+                ok = FULL_SHA_RE.search(ref)
+            if not ok:
+                errors.append(f"{path.relative_to(ROOT)}:{number}: reference mutable {ref}")
+    return errors
+
+
+def check_dockerfiles() -> list[str]:
+    errors = []
+    for path in sorted((ROOT / "apps").glob("*/Dockerfile")):
+        stages: set[str] = set()
+        for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+            match = FROM_RE.match(line)
+            if not match:
+                continue
+            image, alias = match.group(1), match.group(2)
+            # FROM d'un stage precedent ou scratch : pas d'image a epingler
+            if image.lower() not in stages and image != "scratch" and not DIGEST_RE.search(image):
+                errors.append(f"{path.relative_to(ROOT)}:{number}: FROM sans digest {image}")
+            if alias:
+                stages.add(alias.lower())
+    return errors
+
+
+def supply_chain_policy() -> None:
+    errors = check_workflows() + check_dockerfiles()
+    for error in errors:
+        print(error)
+    if errors:
+        raise RuntimeError(f"{len(errors)} reference(s) mutable(s)")
+    print("OK supply-chain-policy")
 
 
 def compose_up() -> None:
@@ -147,6 +199,7 @@ def main() -> int:
             "lint-java",
             "lint-python",
             "verify",
+            "supply-chain-policy",
             "compose-up",
             "compose-down",
             "smoke",
@@ -163,6 +216,7 @@ def main() -> int:
         "lint-java": lint_java,
         "lint-python": lint_python,
         "verify": verify,
+        "supply-chain-policy": supply_chain_policy,
         "compose-up": compose_up,
         "compose-down": compose_down,
         "smoke": smoke,

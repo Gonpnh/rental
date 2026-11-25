@@ -1,0 +1,29 @@
+version: 2
+
+updates:
+  # met a jour les sha des actions (le commentaire de version suit)
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
+
+  # met a jour les digests des FROM
+  - package-ecosystem: docker
+    directory: /apps/car-rental-service
+    schedule:
+      interval: weekly
+    ignore:
+      # pas de saut de version majeure auto (ex: java 17 -> 25)
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: docker
+    directory: /apps/pricing-service
+    schedule:
+      interval: weekly
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
